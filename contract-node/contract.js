@@ -1,7 +1,15 @@
 var Web3 = require('web3')
 
+// this sets up my .env file
+require('dotenv').config()
+
+// get our contract address
+const infuraToken = process.env.INFURA_TOKEN
+const address = process.env.CONTRACT_ADDRESS
+const owner = process.env.OWNER_ADDRESS
+
 // instantiate web3
-const rpcURL = 'https://ropsten.infura.io/v3/4abdec7cbd4445ad8debae347f380817'
+const rpcURL = 'https://ropsten.infura.io/v3/' + infuraToken
 const web3 = new Web3(rpcURL)
 console.log('connected to web3')
 
@@ -263,10 +271,6 @@ const abi = [
 ]
 
 // connect to our contract on ropsten
-
-// get our contract address
-const address = '0x0a9856036ddae2bf5246f6374add07a06150858e'
-const owner = '0x97C13738D6a7Aa9879F2Afe0be01d9A949cD071e'
 
 const contract = new web3.eth.Contract(abi, address)
 console.log('connected to contract on ropsten')
