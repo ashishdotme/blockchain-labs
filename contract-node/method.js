@@ -1,19 +1,21 @@
-var Web3 = require('web3')
+// Web3 etherum talker dependency
+const Web3 = require('web3')
+
+// transaction crafting dependency
+const Tx = require('ethereumjs-tx').Transaction
 
 // this sets up my .env file
 require('dotenv').config()
 
 // get our contract address
 const infuraToken = process.env.INFURA_TOKEN
-const address = process.env.CONTRACT_ADDRESS
+
+// specify adresses
+const contractAddress = process.env.CONTRACT_ADDRESS
 const owner = process.env.OWNER_ADDRESS
+const privateKey = Buffer.from(process.env.PRIVATE_KEY, 'hex')
 
-// instantiate web3
-const rpcURL = 'https://ropsten.infura.io/v3/' + infuraToken
-const web3 = new Web3(rpcURL)
-console.log('connected to web3')
-
-// get the ABI interface for our contract
+// get the ABI (interface) for our contract
 const abi = [
   {
     inputs: [],
@@ -270,26 +272,51 @@ const abi = [
   },
 ]
 
-// connect to our contract on ropsten
+// instantiate web3
+const web3 = new Web3('https://ropsten.infura.io/v3/' + infuraToken)
 
-const contract = new web3.eth.Contract(abi, address)
-console.log('connected to contract on ropsten')
+const contract = new web3.eth.Contract(abi, contractAddress)
 
-const getTotalSupply = async () => {
-  let totSupply = await contract.methods.totalSupply().call()
-  return 'Total supply is: ' + totSupply
+const sendTx = async (raw) => {
+  return await web3.eth.sendSignedTransaction(raw)
 }
 
-const getSymbol = async () => {
-  let totSupply = await contract.methods.symbol().call()
-  return 'Total supply is: ' + totSupply
+const transferToken = async (toAccount, amount) => {
+  // generate a nonce
+
+  let txCount = await web3.eth.getTransactionCount(owner)
+  console.log('tx count is ' + txCount)
+
+  // generate tx data
+  const txObject = {
+    nonce: web3.utils.toHex(txCount),
+    gasLimit: web3.utils.toHex(500000),
+    gasPrice: web3.utils.toHex(web3.utils.toWei('100', 'gwei')),
+    to: contractAddress,
+    data: contract.methods.transfer(toAccount, amount).encodeABI(),
+  }
+
+  const tx = new Tx(txObject, { chain: 'ropsten', hardfork: 'petersburg' })
+
+  // sign the tx
+  tx.sign(privateKey)
+
+  // serialize the raw tx
+  const serializedTx = tx.serialize()
+  const raw = '0x' + serializedTx.toString('hex')
+  console.log('about to send transaction ' + raw)
+  let txHash = await sendTx(raw)
+  console.log('transaction hash: ' + txHash.transactionHash)
+  console.log('transaction in block: ' + txHash.blockNumber)
 }
 
-const returnAllValues = async () => {
-  console.log(await getTotalSupply())
-  console.log(await getSymbol())
-}
+// create a transaction to execute a method (transfer) on the contract
 
+// sign the transaction with our private key
+
+// broadcast the transaction
+
+// transferToken('0x86377bf4f366e8bD2C86D0C46eFD19dCd8b96d4c', 50000000)
 module.exports = {
-  getSymbol,
+  transferToken,
 }
