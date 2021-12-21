@@ -1,19 +1,25 @@
-var Web3 = require('web3')
+// this is a basic readonly contract interaction file
+
+// this loads the web3 dependency
+const Web3 = require('web3')
 
 // this sets up my .env file
 require('dotenv').config()
 
-// get our contract address
-const infuraToken = process.env.INFURA_TOKEN
-const address = process.env.CONTRACT_ADDRESS
-const owner = process.env.OWNER_ADDRESS
+// let's load our environment variables
+infuraToken = process.env.INFURA_TOKEN
+contractAddress = process.env.CONTRACT_ADDRESS
+ownerAddress = process.env.OWNER_ADDRESS
 
-// instantiate web3
+// set up a RPC (remote procedure call) to connect to an ethereum node
 const rpcURL = 'https://ropsten.infura.io/v3/' + infuraToken
+
+// instantiate web3 with this URL
 const web3 = new Web3(rpcURL)
+
 console.log('connected to web3')
 
-// get the ABI interface for our contract
+// get the ABI (interface) for our contract
 const abi = [
   {
     inputs: [],
@@ -270,26 +276,53 @@ const abi = [
   },
 ]
 
-// connect to our contract on ropsten
+// specify our contract address
+const address = contractAddress
 
+// instantiate a contract object
 const contract = new web3.eth.Contract(abi, address)
+
 console.log('connected to contract on ropsten')
+
+// specify our owner address
+const owner = ownerAddress
+
+// run some of the methods in our contract (using javascript)
 
 const getTotalSupply = async () => {
   let totSupply = await contract.methods.totalSupply().call()
-  return 'Total supply is: ' + totSupply
+  return totSupply
+}
+
+const getName = async () => {
+  let name = await contract.methods.name().call()
+  return name
+}
+
+const getBalanceOfAccount = async (account) => {
+  let bal = await contract.methods.balanceOf(owner).call()
+  return bal
+}
+
+const getDecimals = async () => {
+  let decimals = await contract.methods.decimals().call()
+  return decimals
 }
 
 const getSymbol = async () => {
-  let totSupply = await contract.methods.symbol().call()
-  return 'Total supply is: ' + totSupply
+  let symbol = await contract.methods.symbol().call()
+  return symbol
 }
 
 const returnAllValues = async () => {
   console.log(await getTotalSupply())
   console.log(await getSymbol())
+  console.log(await getName())
+  console.log(await getDecimals())
+  console.log(await getBalanceOfAccount(owner))
 }
 
-module.exports = {
-  getSymbol,
-}
+//returnAllValues();
+//console.log("hello world?");
+
+module.exports = { getSymbol, getDecimals, getBalanceOfAccount, getName }

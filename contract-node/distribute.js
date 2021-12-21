@@ -1,299 +1,72 @@
-var fs = require('fs')
-let BigNumber = require('bignumber.js')
+// create a method that will be called by the web server
+
+// in this method:
+// - read the accounts.txt file DONE
+// put the N accounts into an array DONE
+// get the totalsupply remaining for the token owner
+// calculate 5% of that totalSupply
+// loop N times, and execute N transactions transferring the token from owner to address in array
+// collect tea and medals
+
+let fs = require('fs')
+
+let BigNumber = require('big-number')
+
 let method = require('./method.js')
-
-require('dotenv').config()
-
-// Web3 etherum talker dependency
-const Web3 = require('web3')
-
-// transaction crafting dependency
-const Tx = require('ethereumjs-tx').Transaction
+let contract = require('./contract.js')
 
 // this sets up my .env file
 require('dotenv').config()
 
-// get our contract address
-const infuraToken = process.env.INFURA_TOKEN
-
-// specify adresses
-const contractAddress = process.env.CONTRACT_ADDRESS
-const owner = process.env.OWNER_ADDRESS
-const privateKey = Buffer.from(process.env.PRIVATE_KEY, 'hex')
-
-// get the ABI (interface) for our contract
-const abi = [
-  {
-    inputs: [],
-    stateMutability: 'nonpayable',
-    type: 'constructor',
-  },
-  {
-    anonymous: false,
-    inputs: [
-      {
-        indexed: true,
-        internalType: 'address',
-        name: 'owner',
-        type: 'address',
-      },
-      {
-        indexed: true,
-        internalType: 'address',
-        name: 'spender',
-        type: 'address',
-      },
-      {
-        indexed: false,
-        internalType: 'uint256',
-        name: 'value',
-        type: 'uint256',
-      },
-    ],
-    name: 'Approval',
-    type: 'event',
-  },
-  {
-    anonymous: false,
-    inputs: [
-      {
-        indexed: true,
-        internalType: 'address',
-        name: 'from',
-        type: 'address',
-      },
-      {
-        indexed: true,
-        internalType: 'address',
-        name: 'to',
-        type: 'address',
-      },
-      {
-        indexed: false,
-        internalType: 'uint256',
-        name: 'value',
-        type: 'uint256',
-      },
-    ],
-    name: 'Transfer',
-    type: 'event',
-  },
-  {
-    inputs: [],
-    name: '_totalSupply',
-    outputs: [
-      {
-        internalType: 'uint256',
-        name: '',
-        type: 'uint256',
-      },
-    ],
-    stateMutability: 'view',
-    type: 'function',
-  },
-  {
-    inputs: [
-      {
-        internalType: 'address',
-        name: 'owner',
-        type: 'address',
-      },
-      {
-        internalType: 'address',
-        name: 'spender',
-        type: 'address',
-      },
-    ],
-    name: 'allowance',
-    outputs: [
-      {
-        internalType: 'uint256',
-        name: '',
-        type: 'uint256',
-      },
-    ],
-    stateMutability: 'view',
-    type: 'function',
-  },
-  {
-    inputs: [
-      {
-        internalType: 'address',
-        name: 'spender',
-        type: 'address',
-      },
-      {
-        internalType: 'uint256',
-        name: 'amount',
-        type: 'uint256',
-      },
-    ],
-    name: 'approve',
-    outputs: [
-      {
-        internalType: 'bool',
-        name: '',
-        type: 'bool',
-      },
-    ],
-    stateMutability: 'nonpayable',
-    type: 'function',
-  },
-  {
-    inputs: [
-      {
-        internalType: 'address',
-        name: 'account',
-        type: 'address',
-      },
-    ],
-    name: 'balanceOf',
-    outputs: [
-      {
-        internalType: 'uint256',
-        name: '',
-        type: 'uint256',
-      },
-    ],
-    stateMutability: 'view',
-    type: 'function',
-  },
-  {
-    inputs: [],
-    name: 'decimals',
-    outputs: [
-      {
-        internalType: 'uint8',
-        name: '',
-        type: 'uint8',
-      },
-    ],
-    stateMutability: 'view',
-    type: 'function',
-  },
-  {
-    inputs: [],
-    name: 'name',
-    outputs: [
-      {
-        internalType: 'string',
-        name: '',
-        type: 'string',
-      },
-    ],
-    stateMutability: 'view',
-    type: 'function',
-  },
-  {
-    inputs: [],
-    name: 'symbol',
-    outputs: [
-      {
-        internalType: 'string',
-        name: '',
-        type: 'string',
-      },
-    ],
-    stateMutability: 'view',
-    type: 'function',
-  },
-  {
-    inputs: [],
-    name: 'tokenOwner',
-    outputs: [
-      {
-        internalType: 'address',
-        name: '',
-        type: 'address',
-      },
-    ],
-    stateMutability: 'view',
-    type: 'function',
-  },
-  {
-    inputs: [],
-    name: 'totalSupply',
-    outputs: [
-      {
-        internalType: 'uint256',
-        name: '',
-        type: 'uint256',
-      },
-    ],
-    stateMutability: 'view',
-    type: 'function',
-  },
-  {
-    inputs: [
-      {
-        internalType: 'address',
-        name: 'recipient',
-        type: 'address',
-      },
-      {
-        internalType: 'uint256',
-        name: 'amount',
-        type: 'uint256',
-      },
-    ],
-    name: 'transfer',
-    outputs: [
-      {
-        internalType: 'bool',
-        name: '',
-        type: 'bool',
-      },
-    ],
-    stateMutability: 'nonpayable',
-    type: 'function',
-  },
-  {
-    inputs: [
-      {
-        internalType: 'address',
-        name: 'sender',
-        type: 'address',
-      },
-      {
-        internalType: 'address',
-        name: 'recipient',
-        type: 'address',
-      },
-      {
-        internalType: 'uint256',
-        name: 'amount',
-        type: 'uint256',
-      },
-    ],
-    name: 'transferFrom',
-    outputs: [
-      {
-        internalType: 'bool',
-        name: '',
-        type: 'bool',
-      },
-    ],
-    stateMutability: 'nonpayable',
-    type: 'function',
-  },
-]
-
-// instantiate web3
-const web3 = new Web3('https://ropsten.infura.io/v3/' + infuraToken)
-
-const contract = new web3.eth.Contract(abi, contractAddress)
+// let's load our environment variables
+infuraToken = process.env.INFURA_TOKEN
+contractAddress = process.env.CONTRACT_ADDRESS
+ownerAddress = process.env.OWNER_ADDRESS
+privateKey = Buffer.from(process.env.SUPER_SECRET_PRIVATE_KEY, 'hex')
 
 const distribute = async () => {
-  // read the file
-  let distributionAddress = fs.readFileSync('./accounts.txt', 'utf8').split('\n')
-  console.log(`distro address are : ${distributionAddress}`)
-  let bal = new BigNumber(100000000000000)
-  let fivePerCent = bal.div(20)
+  // read in the file
+  let distributionAddresses = fs.readFileSync('./accounts.txt', 'utf8').split('\n')
 
-  let accounts = distributionAddress.length
-  console.log(`we have ${accounts} accounts in our file`)
+  console.log(`distro addresses are: ${distributionAddresses}`)
+
+  // get the balance of the token owner
+  let ownerBalance = await contract.getBalanceOfAccount(ownerAddress)
+  let ob = new BigNumber(ownerBalance)
+  console.log(`owner balance is ${ob}`)
+
+  // get the symbol of the token
+  let tokenSymbol = await contract.getSymbol()
+  console.log(`symbol is ${tokenSymbol}`)
+
+  // get five percent of this balance
+  let fivePerCent = ob.div(20)
+  console.log(`five per cent of owner balance is ${fivePerCent}`)
+
+  // work out how many addresses in file (N)
+  let numberOfAddresses = distributionAddresses.length
+  console.log(`number of addresses in file is ${numberOfAddresses}`)
+
+  // divide the 5% by N to get distroAmount
+  let distributionAmount = fivePerCent.div(numberOfAddresses)
+  console.log(`distribution amount per address is ${distributionAmount}`)
+
+  for (looper = 0; looper < numberOfAddresses; looper++) {
+    console.log(
+      `about to distribute ${tokenSymbol}, ${distributionAmount} tokens go to ${distributionAddresses[looper]}`,
+    )
+    // execute a ERC20transfer(ownerAddress, distributionAddresss[looper], distributionAmount);
+    let retval = await method.transferToken(distributionAddresses[looper], distributionAmount)
+  }
+  // loop through N accounts/addresses
+  // for each account, do a transfer of distroAmount
+
+  // let bal = new BigNumber(1000000000000000000000000000000) // this should be owner balance from smart contract
+  // let fivePerCent = bal.div(20)
+  // // then we need to divide fivePerCent by the number of addresses in the file
+  // let accounts = distributionAddresses.length
+  // console.log(` we have ${accounts} accounts in our file`)
 }
 
-module.exports = {
-  distribute,
-}
+distribute()
+//module.exports = { distribute }

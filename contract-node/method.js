@@ -1,19 +1,15 @@
-// Web3 etherum talker dependency
+// web3 ethereum talker dependency
 const Web3 = require('web3')
 
 // transaction crafting dependency
 const Tx = require('ethereumjs-tx').Transaction
 
-// this sets up my .env file
 require('dotenv').config()
 
-// get our contract address
-const infuraToken = process.env.INFURA_TOKEN
-
-// specify adresses
-const contractAddress = process.env.CONTRACT_ADDRESS
-const owner = process.env.OWNER_ADDRESS
-const privateKey = Buffer.from(process.env.PRIVATE_KEY, 'hex')
+infuraToken = process.env.INFURA_TOKEN
+contractAddress = process.env.CONTRACT_ADDRESS
+ownerAddress = process.env.OWNER_ADDRESS
+privateKey = Buffer.from(process.env.SUPER_SECRET_PRIVATE_KEY, 'hex')
 
 // get the ABI (interface) for our contract
 const abi = [
@@ -272,18 +268,22 @@ const abi = [
   },
 ]
 
-// instantiate web3
+// instantiate web3 with the infura rpc url
 const web3 = new Web3('https://ropsten.infura.io/v3/' + infuraToken)
 
-const contract = new web3.eth.Contract(abi, contractAddress)
+const address = contractAddress
+const owner = ownerAddress
 
+// connect to our contract
+const contract = new web3.eth.Contract(abi, address)
+
+// set up a send transaction method
 const sendTx = async (raw) => {
   return await web3.eth.sendSignedTransaction(raw)
 }
 
 const transferToken = async (toAccount, amount) => {
   // generate a nonce
-
   let txCount = await web3.eth.getTransactionCount(owner)
   console.log('tx count is ' + txCount)
 
@@ -296,27 +296,25 @@ const transferToken = async (toAccount, amount) => {
     data: contract.methods.transfer(toAccount, amount).encodeABI(),
   }
 
+  // assign a chain id (ropsten: 3)
   const tx = new Tx(txObject, { chain: 'ropsten', hardfork: 'petersburg' })
 
-  // sign the tx
+  // sign the tx - THIS USES THE SECRET PRIVATE KEY
   tx.sign(privateKey)
+
+  console.log('signed transaction with super secret private key')
 
   // serialize the raw tx
   const serializedTx = tx.serialize()
   const raw = '0x' + serializedTx.toString('hex')
-  console.log('about to send transaction ' + raw)
-  let txHash = await sendTx(raw)
-  console.log('transaction hash: ' + txHash.transactionHash)
-  console.log('transaction in block: ' + txHash.blockNumber)
+
+  console.log('about to send transaction' + raw)
+
+  // broadcast the transaction
+  let txResponse = await sendTx(raw)
+  console.log('transaction hash: ' + txResponse.transactionHash)
+  console.log('transaction in block: ' + txResponse.blockNumber)
 }
 
-// create a transaction to execute a method (transfer) on the contract
-
-// sign the transaction with our private key
-
-// broadcast the transaction
-
-// transferToken('0x86377bf4f366e8bD2C86D0C46eFD19dCd8b96d4c', 50000000)
-module.exports = {
-  transferToken,
-}
+module.exports = { transferToken }
+//transferToken("0xFbC8857d46223C39C48BA844c5AB0159EA3B8692", 123000000)

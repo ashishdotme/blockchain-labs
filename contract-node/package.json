@@ -2,13 +2,14 @@
   "name": "contract-node",
   "version": "1.0.0",
   "description": "",
-  "main": "index.js",
+  "main": "distribute.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "big-number": "^2.0.0",
     "bignumber": "^1.1.0",
     "bignumber.js": "^9.0.1",
     "dotenv": "^10.0.0",
